@@ -13,7 +13,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-$latestUpdateTime = null;
+$latestUpdateDate = null;
+$fileName = $_SERVER['HOME'] . '/.check-dy-update.ip';
 
 if ($argc != 4 ) {
     echo 'Invalid count of parameters' . PHP_EOL;
@@ -26,7 +27,13 @@ $externalContent = file_get_contents('http://checkip.dy.fi/');
 preg_match('/\b(?:\d{1,3}\.){3}\d{1,3}\b/', $externalContent, $m);
 $currIp = $m[0];
 $ip = getIpFromFile();
-if ($currIp != $ip[0] ) {
+
+$now = time ();
+
+$dateDiff = $now - $latestUpdateDate;
+$lastUpdate = floor($dateDiff/(60*60*24));
+
+if ($currIp != $ip[0] && $lastUpdate > 4) {
     // update ip address to the dy.fi
     $userName = $argv[1];
     $password = $argv[2];
@@ -35,29 +42,36 @@ if ($currIp != $ip[0] ) {
     updateIpToFile($currIp);
 }
 
-echo $currIp;
 exit (0);
 
 function updateDomainDNSRecords ($user, $password, $domain)
 {
-    $rs = curl_init("http://dy.fi");
+    global $fileName;
+    $rs = curl_init("https://dy.fi/nic/update?hostname=$domain");
+    curl_setopt($rs, CURLOPT_USERPWD, "$user:$password");
+    curl_exec($rs);
+    $info = curl_getinfo($rs, CURLINFO_HTTP_CODE);
+    if ($info == 200)  {
+        touch ($fileName);
+    }
+    echo "https response code : $info";
     curl_close($rs);
 }
 
 function updateIpToFile ($newIp)
 {
-    $filename = $_SERVER['HOME'] . '/.check-dy-update.ip';
-    file_put_contents ($filename, $newIp);
+    global $fileName;
+    file_put_contents ($fileName, $newIp);
 }
 
 function getIpFromFile ()
 {
     $ip = null;
-    global $latestUpdateTime;
-    $filename = $_SERVER['HOME'] . '/.check-dy-update.ip';
-    if (file_exists($filename))  {
-        $latestUpdateTime = filemtime ($filename);
-        $ip = file ($filename);
+    global $fileName;
+    global $latestUpdateDate;
+    if (file_exists($fileName))  {
+        $latestUpdateDate = filemtime($fileName);
+        $ip = file ($fileName);
     } else {
         $ip = null;
     }
