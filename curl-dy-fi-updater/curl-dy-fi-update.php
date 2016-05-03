@@ -35,10 +35,7 @@ $lastUpdate = floor($dateDiff/(60*60*24));
 
 if ($currIp != $ip[0] && $lastUpdate > 4) {
     // update ip address to the dy.fi
-    $userName = $argv[1];
-    $password = $argv[2];
-    $domain = $argv[3];
-    updateDomainDNSRecords ($userName, $password, $domain);
+    updateDomainDNSRecords ($argv[1], $argv[2], $argv[3]);
     updateIpToFile($currIp);
 }
 
